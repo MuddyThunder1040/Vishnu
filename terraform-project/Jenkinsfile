@@ -1,0 +1,43 @@
+pipeline {
+  agent any
+
+  environment {
+    TF_VAR_region = 'us-west-2'
+  }
+
+  stages {
+    stage('Init') {
+      steps {
+        sh 'terraform init -backend-config=backend.tf'
+      }
+    }
+
+    stage('Validate') {
+      steps {
+        sh 'terraform validate'
+      }
+    }
+
+    stage('Plan') {
+      steps {
+        sh 'terraform plan -var-file=envs/dev.tfvars'
+      }
+    }
+
+    stage('Apply') {
+      when {
+        branch 'main'
+      }
+      steps {
+        input "Apply changes?"
+        sh 'terraform apply -auto-approve -var-file=envs/dev.tfvars'
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: '**/terraform.tfstate', fingerprint: true
+    }
+  }
+}
